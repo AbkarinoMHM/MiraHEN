@@ -21,7 +21,9 @@
 #include <oni/utils/log/logger.h>
 #include <oni/utils/sys_wrappers.h>
 #include <oni/rpc/rpcserver.h>
+#include <oni/utils/memory/allocator.h>
 
+int64_t ps4AssemblerSystemCall(int syscall, ...);
 
 uint8_t* gKernelBase = 0;
 
@@ -34,24 +36,22 @@ struct initparams_t* gInitParams = NULL;
 void initkernel();
 void kernelstartup(void* args);
 
-int initalize()
+void main()
 {
-	syscall(11, initkernel);
-
-	return 1;
+	ps4AssemblerSystemCall(11, initkernel);
 }
 
 void initkernel()
 {
-	gKernelBase = 0xFFFFFFFFDEADC0DE;
+	gKernelBase = (uint8_t*)0xFFFFFFFFDEADC0DE;
 
-	uint8_t* userlandPayload = 0xDEADC0DEDEADC0DE;
+	uint8_t* userlandPayload = (uint8_t*)0xDEADC0DEDEADC0DE;
 	uint32_t userlandPayloadLength = 0xDEADC0DE;
 
 	void(*critical_enter)(void) = kdlsym(critical_enter);
 	void(*crtical_exit)(void) = kdlsym(critical_exit);
 	vm_offset_t(*kmem_alloc)(vm_map_t map, vm_size_t size) = kdlsym(kmem_alloc);
-	void(*printf)(char *format, ...) = kdlsym(printf);
+	//void(*printf)(char *format, ...) = kdlsym(printf);
 	int(*kproc_create)(void(*func)(void*), void* arg, struct proc** newpp, int flags, int pages, const char* fmt, ...) = kdlsym(kproc_create);
 	vm_map_t map = (vm_map_t)(*(uint64_t *)(kdlsym(kernel_map)));
 
@@ -67,7 +67,7 @@ void initkernel()
 	// todo: enable write protection
 	crtical_exit();
 
-	uint8_t* kernelPayload = (uint8_t*)kmem_alloc(map, userlandPayload);
+	uint8_t* kernelPayload = (uint8_t*)kmem_alloc(map, userlandPayloadLength);
 	if (!kernelPayload)
 		return;
 
@@ -100,8 +100,8 @@ void kernelstartup(void* args)
 	void(*pmap_activate)(struct thread *td) = kdlsym(pmap_activate);
 	struct sysentvec* sv = kdlsym(self_orbis_sysvec);
 
-	void(*critical_enter)(void) = kdlsym(critical_enter);
-	void(*crtical_exit)(void) = kdlsym(critical_exit);
+	//void(*critical_enter)(void) = kdlsym(critical_enter);
+	//void(*crtical_exit)(void) = kdlsym(critical_exit);
 
 	gLogger = (struct logger_t*)kmalloc(sizeof(struct logger_t));
 	if (!gLogger)
